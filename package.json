@@ -3,7 +3,18 @@
   "version": "0.1.0",
   "description": "Node API for TA-Lib",
   "main": "index.js",
+  "types": "index.d.ts",
+  "files": [
+    "src/*.cpp",
+    "src/ta-lib/include/",
+    "src/ta-lib/src/",
+    "index.js",
+    "index.d.ts",
+    "binding.gyp"
+  ],
   "scripts": {
+    "build": "node-gyp clean && node-gyp-build",
+    "build:debug": "node-gyp clean && node-gyp configure && node-gyp build --debug",
     "install": "node-gyp-build",
     "prebuild": "prebuildify --napi",
     "test": "node test.js"
