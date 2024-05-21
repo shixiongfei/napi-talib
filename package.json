@@ -1,0 +1,35 @@
+{
+  "name": "napi-talib",
+  "version": "0.1.0",
+  "description": "Node API for TA-Lib",
+  "main": "index.js",
+  "scripts": {
+    "install": "node-gyp-build",
+    "prebuild": "prebuildify --napi",
+    "test": "node test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shixiongfei/napi-talib.git"
+  },
+  "keywords": [
+    "ta-lib",
+    "talib",
+    "trading",
+    "indicators",
+    "technical analysis"
+  ],
+  "author": "shixiongfei",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/shixiongfei/napi-talib/issues"
+  },
+  "homepage": "https://github.com/shixiongfei/napi-talib#readme",
+  "dependencies": {
+    "node-gyp-build": "^4.8.1"
+  },
+  "devDependencies": {
+    "node-gyp": "^10.1.0",
+    "prebuildify": "^6.0.1"
+  }
+}
