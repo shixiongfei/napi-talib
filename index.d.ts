@@ -8,3 +8,9 @@
  *
  * https://github.com/shixiongfei/napi-talib
  */
+
+/** Get functions including grouping */
+export declare function getFunctionGroups(): Record<string, string[]>;
+
+/** Get functions */
+export declare function getFunctions(): string[];

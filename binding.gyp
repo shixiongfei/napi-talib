@@ -3,7 +3,7 @@
     {
       "target_name": "napi_talib",
       "sources": [
-        "./src/napi_talib.cpp",
+        "./src/binding.cpp",
         "./src/ta-lib/src/ta_abstract/frames/ta_frame.c",
         "./src/ta-lib/src/ta_abstract/tables/table_a.c",
         "./src/ta-lib/src/ta_abstract/tables/table_b.c",

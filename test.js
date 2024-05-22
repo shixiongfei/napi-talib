@@ -11,4 +11,5 @@
 
 const talib = require(".");
 
-console.log(talib.talib());
+console.log(talib.getFunctionGroups());
+console.log(talib.getFunctions());
