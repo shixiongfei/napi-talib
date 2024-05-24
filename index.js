@@ -9,5 +9,10 @@
  * https://github.com/shixiongfei/napi-talib
  */
 
-const binding = require("node-gyp-build")(__dirname);
-module.exports = binding;
+try {
+  const binding = require("./build/Release/napi_talib.node");
+  module.exports = binding;
+} catch {
+  const binding = require("./build/Debug/napi_talib.node");
+  module.exports = binding;
+}
