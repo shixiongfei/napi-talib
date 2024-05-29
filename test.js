@@ -13,3 +13,4 @@ const talib = require(".");
 
 console.log(talib.getFunctionGroups());
 console.log(talib.getFunctions());
+console.log(talib.explain("ADX"));
