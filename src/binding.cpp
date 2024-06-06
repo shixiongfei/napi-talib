@@ -38,11 +38,12 @@ static void checkStatus(napi_env env, napi_status status, const char *file, int 
 typedef struct WorkObject {
   TA_FuncHandle *funcHandle;
   TA_ParamHolder *funcParams;
+  TA_RetCode retCode;
   int startIdx;
   int endIdx;
-  int nbOutput;
   int outBegIdx;
   int outNBElement;
+  unsigned int nbOutput;
   std::vector<double *> outReals;
   std::vector<int *> outIntegers;
   std::vector<void *> garbage;
@@ -50,6 +51,7 @@ typedef struct WorkObject {
   WorkObject() {
     funcHandle = nullptr;
     funcParams = nullptr;
+    retCode = TA_SUCCESS;
     startIdx = 0;
     endIdx = 0;
     nbOutput = 0;
@@ -65,6 +67,20 @@ static napi_status setArrayString(napi_env env, napi_value array, unsigned int i
   return napi_set_element(env, array, index, value);
 }
 
+static napi_status setArrayDouble(napi_env env, napi_value array, unsigned int index, double number) {
+  napi_value value;
+
+  CHECK(napi_create_double(env, number, &value));
+  return napi_set_element(env, array, index, value);
+}
+
+static napi_status setArrayInt32(napi_env env, napi_value array, unsigned int index, int number) {
+  napi_value value;
+
+  CHECK(napi_create_int32(env, number, &value));
+  return napi_set_element(env, array, index, value);
+}
+
 static napi_status setNamedPropertyString(napi_env env, napi_value object, const char *name, const char *string) {
   napi_value value;
 
@@ -76,6 +92,13 @@ static napi_status setNamedPropertyDouble(napi_env env, napi_value object, const
   napi_value value;
 
   CHECK(napi_create_double(env, number, &value));
+  return napi_set_named_property(env, object, name, value);
+}
+
+static napi_status setNamedPropertyInt32(napi_env env, napi_value object, const char *name, int number) {
+  napi_value value;
+
+  CHECK(napi_create_int32(env, number, &value));
   return napi_set_named_property(env, object, name, value);
 }
 
@@ -470,20 +493,26 @@ static void freeWorkObject(WorkObject *workObject) {
   if (workObject->funcParams)
     TA_ParamHolderFree(workObject->funcParams);
 
-  for (auto iter = workObject->outReals.begin(); iter != workObject->outReals.end(); iter++)
-    free(*iter);
+  if (workObject->outReals.size() > 0) {
+    for (auto iter = workObject->outReals.begin(); iter != workObject->outReals.end(); iter++)
+      free(*iter);
 
-  workObject->outReals.clear();
+    workObject->outReals.clear();
+  }
 
-  for (auto iter = workObject->outIntegers.begin(); iter != workObject->outIntegers.end(); iter++)
-    free(*iter);
+  if (workObject->outIntegers.size() > 0) {
+    for (auto iter = workObject->outIntegers.begin(); iter != workObject->outIntegers.end(); iter++)
+      free(*iter);
 
-  workObject->outIntegers.clear();
+    workObject->outIntegers.clear();
+  }
 
-  for (auto iter = workObject->garbage.begin(); iter != workObject->garbage.end(); iter++)
-    free(*iter);
+  if (workObject->garbage.size() > 0) {
+    for (auto iter = workObject->garbage.begin(); iter != workObject->garbage.end(); iter++)
+      free(*iter);
 
-  workObject->garbage.clear();
+    workObject->garbage.clear();
+  }
 }
 
 static bool parseWorkObject(napi_env env, napi_value object, WorkObject *workObject, napi_value *error) {
@@ -625,7 +654,7 @@ static bool parseWorkObject(napi_env env, napi_value object, WorkObject *workObj
           workObject->garbage.push_back(openInterest);
         }
 
-        if (TA_SUCCESS == (retCode = TA_SetInputParamPricePtr(workObject->funcParams, i, open, high, low, close, volume, openInterest))) {
+        if (TA_SUCCESS != (retCode = TA_SetInputParamPricePtr(workObject->funcParams, i, open, high, low, close, volume, openInterest))) {
           freeWorkObject(workObject);
           CHECK(createTAError(env, retCode, error));
           return false;
@@ -649,7 +678,7 @@ static bool parseWorkObject(napi_env env, napi_value object, WorkObject *workObj
 
         retCode = TA_SetInputParamRealPtr(workObject->funcParams, i, inReal);
 
-        if (TA_SUCCESS == retCode) {
+        if (TA_SUCCESS != retCode) {
           freeWorkObject(workObject);
           CHECK(createTAError(env, retCode, error));
           return false;
@@ -673,7 +702,7 @@ static bool parseWorkObject(napi_env env, napi_value object, WorkObject *workObj
 
         retCode = TA_SetInputParamIntegerPtr(workObject->funcParams, i, inInteger);
 
-        if (TA_SUCCESS == retCode) {
+        if (TA_SUCCESS != retCode) {
           freeWorkObject(workObject);
           CHECK(createTAError(env, retCode, error));
           return false;
@@ -689,40 +718,24 @@ static bool parseWorkObject(napi_env env, napi_value object, WorkObject *workObj
     switch (optParaminfo->type) {
       case TA_OptInput_RealRange:
       case TA_OptInput_RealList:
-        if (!getNamedPropertyDouble(env, object, inputParaminfo->paramName, &optInReal)) {
-          char errmsg[64] = {0};
-
-          freeWorkObject(workObject);
-          snprintf(errmsg, sizeof(errmsg), "Missing '%s' field", inputParaminfo->paramName);
-          CHECK(createError(env, errmsg, error));
-          return false;
+        if (getNamedPropertyDouble(env, object, optParaminfo->paramName, &optInReal)) {
+          if (TA_SUCCESS != (retCode = TA_SetOptInputParamReal(workObject->funcParams, i, optInReal))) {
+            freeWorkObject(workObject);
+            CHECK(createTAError(env, retCode, error));
+            return false;
+          }
         }
-
-        if (TA_SUCCESS != (retCode = TA_SetOptInputParamReal(workObject->funcParams, i, optInReal))) {
-          freeWorkObject(workObject);
-          CHECK(createTAError(env, retCode, error));
-          return false;
-        }
-
         break;
 
       case TA_OptInput_IntegerRange:
       case TA_OptInput_IntegerList:
-        if (!getNamedPropertyInt32(env, object, inputParaminfo->paramName, &optInInteger)) {
-          char errmsg[64] = {0};
-
-          freeWorkObject(workObject);
-          snprintf(errmsg, sizeof(errmsg), "Missing '%s' field", inputParaminfo->paramName);
-          CHECK(createError(env, errmsg, error));
-          return false;
+        if (getNamedPropertyInt32(env, object, optParaminfo->paramName, &optInInteger)) {
+          if (TA_SUCCESS != (retCode = TA_SetOptInputParamInteger(workObject->funcParams, i, optInInteger))) {
+            freeWorkObject(workObject);
+            CHECK(createTAError(env, retCode, error));
+            return false;
+          }
         }
-
-        if (TA_SUCCESS != (retCode = TA_SetOptInputParamInteger(workObject->funcParams, i, optInInteger))) {
-          freeWorkObject(workObject);
-          CHECK(createTAError(env, retCode, error));
-          return false;
-        }
-
         break;
     }
   }
@@ -776,8 +789,58 @@ static bool parseWorkObject(napi_env env, napi_value object, WorkObject *workObj
   return true;
 }
 
+static bool generateResult(napi_env env, const WorkObject *workObject, napi_value *result) {
+  napi_value object, array;
+  int outRealIdx = 0;
+  int outIntegerIdx = 0;
+  double *outReal;
+  int *outInteger;
+  const TA_OutputParameterInfo *outputParaminfo;
+
+  if (TA_SUCCESS != workObject->retCode) {
+    CHECK(createTAError(env, workObject->retCode, result));
+    return false;
+  }
+
+  CHECK(napi_create_object(env, result));
+  CHECK(napi_create_object(env, &object));
+
+  CHECK(setNamedPropertyInt32(env, *result, "begIndex", workObject->outBegIdx));
+  CHECK(setNamedPropertyInt32(env, *result, "nbElement", workObject->outNBElement));
+
+  for (unsigned int i = 0; i < workObject->nbOutput; ++i) {
+    TA_GetOutputParameterInfo(workObject->funcHandle, i, &outputParaminfo);
+
+    CHECK(napi_create_array_with_length(env, workObject->outNBElement, &array));
+
+    switch (outputParaminfo->type) {
+      case TA_Output_Real:
+        outReal = workObject->outReals[outRealIdx++];
+
+        for (int j = 0; j < workObject->outNBElement; ++i)
+          CHECK(setArrayDouble(env, array, j, outReal[j]));
+
+        break;
+
+      case TA_Output_Integer:
+        outInteger = workObject->outIntegers[outIntegerIdx++];
+
+        for (int j = 0; j < workObject->outNBElement; ++i)
+          CHECK(setArrayInt32(env, array, j, outInteger[j]));
+
+        break;
+    }
+
+    CHECK(napi_set_named_property(env, object, outputParaminfo->paramName, array));
+  }
+
+  CHECK(napi_set_named_property(env, *result, "results", object));
+
+  return true;
+}
+
 static napi_value executeSync(napi_env env, napi_value jsthis, napi_value object) {
-  napi_value error;
+  napi_value result, error;
   WorkObject workObject;
 
   if (!parseWorkObject(env, object, &workObject, &error)) {
@@ -785,9 +848,16 @@ static napi_value executeSync(napi_env env, napi_value jsthis, napi_value object
     return jsthis;
   }
 
-  freeWorkObject(&workObject);
+  workObject.retCode = TA_CallFunc(workObject.funcParams, workObject.startIdx, workObject.endIdx, &workObject.outBegIdx, &workObject.outNBElement);
 
-  return object;
+  if (!generateResult(env, &workObject, &result)) {
+    freeWorkObject(&workObject);
+    CHECK(napi_throw(env, result));
+    return jsthis;
+  }
+
+  freeWorkObject(&workObject);
+  return result;
 }
 
 static napi_value executeAsync(napi_env env, napi_value object, napi_value callback) {
@@ -832,6 +902,14 @@ static napi_value execute(napi_env env, napi_callback_info info) {
     : executeSync(env, jsthis, argv[0]);
 }
 
+static napi_value version(napi_env env, napi_callback_info info) {
+  napi_value value;
+
+  CHECK(napi_create_string_utf8(env, TA_GetVersionString(), NAPI_AUTO_LENGTH, &value));
+
+  return value;
+}
+
 static napi_value init(napi_env env, napi_value exports) {
   TA_Initialize();
 
@@ -840,6 +918,7 @@ static napi_value init(napi_env env, napi_value exports) {
     DECLARE_NAPI_METHOD(getFunctions),
     DECLARE_NAPI_METHOD(explain),
     DECLARE_NAPI_METHOD(execute),
+    DECLARE_NAPI_METHOD(version),
   };
   CHECK(napi_define_properties(env, exports, arraysize(props), props));
 

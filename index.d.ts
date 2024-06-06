@@ -97,7 +97,7 @@ export type FuncParam = {
 export type FuncResult = {
   begIndex: number;
   nbElement: number;
-  result: number[];
+  results: { [parameter: string]: number[] };
 };
 
 /** Get functions including grouping */
@@ -111,3 +111,6 @@ export declare function explain(funcName: string): FuncInfo;
 
 /** Execute function */
 export declare function execute(param: FuncParam): FuncResult;
+
+/** Get TA-Lib version */
+export declare function version(): string;
