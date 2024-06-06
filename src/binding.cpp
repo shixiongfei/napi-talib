@@ -517,12 +517,12 @@ static void freeWorkObject(WorkObject *workObject) {
 
 static bool parseWorkObject(napi_env env, napi_value object, WorkObject *workObject, napi_value *error) {
   char funcName[64] = {0};
-  double *open;
-  double *high;
-  double *low;
-  double *close;
-  double *volume;
-  double *openInterest;
+  double *open = nullptr;
+  double *high = nullptr;
+  double *low = nullptr;
+  double *close = nullptr;
+  double *volume = nullptr;
+  double *openInterest = nullptr;
   double *inReal;
   int *inInteger;
   double optInReal;
@@ -817,7 +817,7 @@ static bool generateResult(napi_env env, const WorkObject *workObject, napi_valu
       case TA_Output_Real:
         outReal = workObject->outReals[outRealIdx++];
 
-        for (int j = 0; j < workObject->outNBElement; ++i)
+        for (int j = 0; j < workObject->outNBElement; ++j)
           CHECK(setArrayDouble(env, array, j, outReal[j]));
 
         break;
@@ -825,7 +825,7 @@ static bool generateResult(napi_env env, const WorkObject *workObject, napi_valu
       case TA_Output_Integer:
         outInteger = workObject->outIntegers[outIntegerIdx++];
 
-        for (int j = 0; j < workObject->outNBElement; ++i)
+        for (int j = 0; j < workObject->outNBElement; ++j)
           CHECK(setArrayInt32(env, array, j, outInteger[j]));
 
         break;
