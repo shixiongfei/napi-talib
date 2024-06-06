@@ -75,6 +75,31 @@ export type FuncInfo = {
   outputs: OutputParameterInfo[];
 };
 
+export enum MAType {
+  SMA,
+  EMA,
+  WMA,
+  DEMA,
+  TEMA,
+  TRIMA,
+  KAMA,
+  MAMA,
+  T3,
+}
+
+export type FuncParam = {
+  name: string;
+  startIdx: number;
+  endIdx: number;
+  [parameter: string]: number[] | number;
+};
+
+export type FuncResult = {
+  begIndex: number;
+  nbElement: number;
+  result: number[];
+};
+
 /** Get functions including grouping */
 export declare function getFunctionGroups(): Record<string, string[]>;
 
@@ -83,3 +108,6 @@ export declare function getFunctions(): string[];
 
 /** Get function infomation */
 export declare function explain(funcName: string): FuncInfo;
+
+/** Execute function */
+export declare function execute(param: FuncParam): FuncResult;

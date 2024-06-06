@@ -12,5 +12,19 @@
 const talib = require(".");
 
 console.log(talib.getFunctionGroups());
+
 console.log(talib.getFunctions());
-console.log(talib.explain("ADX"));
+
+console.log(talib.explain("MACDEXT"));
+
+console.log(talib.execute({ name: "ADX", startIdx: 0, endIdx: 0 }));
+
+console.log(
+  talib.execute({}, (error, result) => {
+    if (error) {
+      console.error(error instanceof Error ? error.message : error);
+    } else {
+      console.log(result);
+    }
+  })
+);
