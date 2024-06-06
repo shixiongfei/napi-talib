@@ -13,6 +13,7 @@
 #include <vector>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <node_api.h>
 
 #define arraysize(a) ((int)(sizeof(a) / sizeof(*a)))
@@ -739,6 +740,7 @@ static bool parseWorkObject(napi_env env, napi_value object, WorkObject *workObj
           return false;
         }
 
+        memset(outReal, 0, sizeof(double) * (workObject->endIdx - workObject->startIdx + 1));
         workObject->outReals.push_back(outReal);
 
         if (TA_SUCCESS != (retCode = TA_SetOutputParamRealPtr(workObject->funcParams, i, outReal))) {
@@ -758,6 +760,7 @@ static bool parseWorkObject(napi_env env, napi_value object, WorkObject *workObj
           return false;
         }
 
+        memset(outInteger, 0, sizeof(int) * (workObject->endIdx - workObject->startIdx + 1));
         workObject->outIntegers.push_back(outInteger);
 
         if (TA_SUCCESS != (retCode = TA_SetOutputParamIntegerPtr(workObject->funcParams, i, outInteger))) {
