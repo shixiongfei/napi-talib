@@ -382,6 +382,45 @@ static napi_value explain(napi_env env, napi_callback_info info) {
   return object;
 }
 
+static napi_value executeSync(napi_env env, napi_value object) {
+  return object;
+}
+
+static napi_value executeAsync(napi_env env, napi_value object, napi_value callback) {
+  napi_value undefined, errmsg, argv[2];
+
+  CHECK(napi_get_undefined(env, &undefined));
+
+  CHECK(napi_create_string_utf8(env, "Not Yet Implemented", NAPI_AUTO_LENGTH, &errmsg));
+  CHECK(napi_create_error(env, nullptr, errmsg, &argv[0]));
+  argv[1] = undefined;
+
+  CHECK(napi_call_function(env, undefined, callback, 2, argv, nullptr));
+
+  return undefined;
+}
+
+static napi_value execute(napi_env env, napi_callback_info info) {
+  size_t argc = 2;
+  napi_value argv[2], jsthis;
+  napi_valuetype valuetype;
+
+  CHECK(napi_get_cb_info(env, info, &argc, argv, &jsthis, nullptr));
+
+  CHECK(napi_typeof(env, argv[0], &valuetype));
+
+  if (valuetype != napi_object) {
+    napi_throw_type_error(env, nullptr, "The first argument must be a Object");
+    return jsthis;
+  }
+
+  CHECK(napi_typeof(env, argv[1], &valuetype));
+
+  return valuetype == napi_function
+    ? executeAsync(env, argv[0], argv[1])
+    : executeSync(env, argv[0]);
+}
+
 static napi_value init(napi_env env, napi_value exports) {
   TA_Initialize();
 
@@ -389,6 +428,7 @@ static napi_value init(napi_env env, napi_value exports) {
     DECLARE_NAPI_METHOD(getFunctionGroups),
     DECLARE_NAPI_METHOD(getFunctions),
     DECLARE_NAPI_METHOD(explain),
+    DECLARE_NAPI_METHOD(execute),
   };
   CHECK(napi_define_properties(env, exports, arraysize(props), props));
 
