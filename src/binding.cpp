@@ -898,7 +898,7 @@ static void executeAsyncComplete(napi_env env, napi_status status, void *data) {
 }
 
 static napi_value executeAsync(napi_env env, napi_value object, napi_value callback) {
-  napi_value undefined, argv[2];
+  napi_value undefined, name, argv[2];
   AsyncWorkData *asyncWorkData = new AsyncWorkData();
 
   CHECK(napi_get_undefined(env, &undefined));
@@ -912,14 +912,15 @@ static napi_value executeAsync(napi_env env, napi_value object, napi_value callb
     argv[1] = undefined;
 
     freeWorkData(&asyncWorkData->workData);
-    delete asyncWorkData
+    delete asyncWorkData;
 
     CHECK(napi_call_function(env, undefined, callback, 2, argv, nullptr));
     return undefined;
   }
 
   CHECK(napi_create_reference(env, callback, 1, &asyncWorkData->cbref));
-  CHECK(napi_create_async_work(env, nullptr, nullptr, executeAsyncCallback, executeAsyncComplete, asyncWorkData, &asyncWorkData->worker));
+  CHECK(napi_create_string_utf8(env, "TA-Lib.Worker", NAPI_AUTO_LENGTH, &name));
+  CHECK(napi_create_async_work(env, nullptr, name, executeAsyncCallback, executeAsyncComplete, asyncWorkData, &asyncWorkData->worker));
   CHECK(napi_queue_async_work(env, asyncWorkData->worker));
 
   return undefined;

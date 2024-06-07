@@ -44,23 +44,21 @@ console.log(
   })
 );
 
-console.log(
-  talib.execute(
-    {
-      name: "ADX",
-      startIdx: 0,
-      endIdx: marketData.close.length - 1,
-      high: marketData.high,
-      low: marketData.low,
-      close: marketData.close,
-      optInTimePeriod: 9,
-    },
-    (error, result) => {
-      if (error) {
-        console.error(error.message);
-      } else {
-        console.log(result);
-      }
+talib.execute(
+  {
+    name: "ADX",
+    startIdx: 0,
+    endIdx: marketData.close.length - 1,
+    high: marketData.high,
+    low: marketData.low,
+    close: marketData.close,
+    optInTimePeriod: 9,
+  },
+  (error, result) => {
+    if (error) {
+      console.error(error.message);
+    } else {
+      console.log(result);
     }
-  )
+  }
 );
