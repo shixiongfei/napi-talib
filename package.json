@@ -10,6 +10,9 @@
     "src/ta-lib/src/",
     "index.js",
     "index.d.ts",
+    "functions.ts",
+    "functions.js",
+    "functions.d.ts",
     "types.ts",
     "types.js",
     "types.d.ts",
@@ -17,7 +20,7 @@
     "tsconfig.json"
   ],
   "scripts": {
-    "gen-types": "tsc",
+    "gencodes": "node gencodes.js && tsc",
     "build": "node-gyp clean && node-gyp configure && node-gyp build && tsc",
     "build:debug": "node-gyp clean && node-gyp configure && node-gyp build --debug && tsc",
     "install": "node-gyp configure && node-gyp build",

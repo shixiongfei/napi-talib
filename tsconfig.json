@@ -2,6 +2,7 @@
   "compilerOptions": {
     "module": "NodeNext",
     "target": "ES5",
+    "baseUrl": ".",
     "outDir": ".",
     "declaration": true,
     "esModuleInterop": true,
@@ -11,5 +12,5 @@
     "noImplicitAny": true,
     "skipLibCheck": true
   },
-  "files": ["types.ts"]
+  "exclude": ["*.d.ts"]
 }

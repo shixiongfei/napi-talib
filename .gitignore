@@ -3,3 +3,6 @@ build/
 prebuilds/
 types.js
 types.d.ts
+functions.ts
+functions.js
+functions.d.ts
