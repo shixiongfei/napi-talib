@@ -121,7 +121,7 @@ static bool getNamedProperty(napi_env env, napi_value object, const char *name, 
   return true;
 }
 
-static bool getNamedPropertyString(napi_env env, napi_value object, const char *name, char* buf, size_t bufsize) {
+static bool getNamedPropertyString(napi_env env, napi_value object, const char *name, char *buf, size_t bufsize) {
   napi_value value;
 
   if (!getNamedProperty(env, object, name, &value))
