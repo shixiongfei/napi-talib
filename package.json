@@ -10,11 +10,16 @@
     "src/ta-lib/src/",
     "index.js",
     "index.d.ts",
-    "binding.gyp"
+    "types.ts",
+    "types.js",
+    "types.d.ts",
+    "binding.gyp",
+    "tsconfig.json"
   ],
   "scripts": {
-    "build": "node-gyp clean && node-gyp configure && node-gyp build",
-    "build:debug": "node-gyp clean && node-gyp configure && node-gyp build --debug",
+    "gen-types": "tsc",
+    "build": "node-gyp clean && node-gyp configure && node-gyp build && tsc",
+    "build:debug": "node-gyp clean && node-gyp configure && node-gyp build --debug && tsc",
     "install": "node-gyp configure && node-gyp build",
     "test": "node test.js"
   },
@@ -36,6 +41,8 @@
   },
   "homepage": "https://github.com/shixiongfei/napi-talib#readme",
   "devDependencies": {
-    "node-gyp": "^10.1.0"
+    "@types/node": "^20.14.2",
+    "node-gyp": "^10.1.0",
+    "typescript": "^5.4.5"
   }
 }

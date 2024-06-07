@@ -9,10 +9,12 @@
  * https://github.com/shixiongfei/napi-talib
  */
 
+const types = require("./types.js");
+
 try {
   const binding = require("./build/Release/napi_talib.node");
-  module.exports = binding;
+  module.exports = Object.assign(binding, types);
 } catch {
   const binding = require("./build/Debug/napi_talib.node");
-  module.exports = binding;
+  module.exports = Object.assign(binding, types);
 }

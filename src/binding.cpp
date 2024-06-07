@@ -522,6 +522,7 @@ static void freeWorkData(WorkData *workData) {
 }
 
 static bool parseWorkData(napi_env env, napi_value object, WorkData *workData, napi_value *error) {
+  napi_value params;
   char funcName[64] = {0};
   double *open = nullptr;
   double *high = nullptr;
@@ -566,6 +567,11 @@ static bool parseWorkData(napi_env env, napi_value object, WorkData *workData, n
     return false;
   }
 
+  if (!getNamedProperty(env, object, "params", &params)) {
+    CHECK(createError(env, "Missing 'params' field", error));
+    return false;
+  }
+
   if (TA_SUCCESS != (retCode = TA_GetFuncHandle(funcName, (const TA_FuncHandle **)&workData->funcHandle))) {
     CHECK(createTAError(env, retCode, error));
     return false;
@@ -589,7 +595,7 @@ static bool parseWorkData(napi_env env, napi_value object, WorkData *workData, n
     switch (inputParaminfo->type) {
       case TA_Input_Price:
         if (inputParaminfo->flags & TA_IN_PRICE_OPEN) {
-          open = getNamedPropertyDoubleArray(env, object, "open");
+          open = getNamedPropertyDoubleArray(env, params, "open");
 
           if (!open) {
             freeWorkData(workData);
@@ -601,7 +607,7 @@ static bool parseWorkData(napi_env env, napi_value object, WorkData *workData, n
         }
 
         if (inputParaminfo->flags & TA_IN_PRICE_HIGH) {
-          high = getNamedPropertyDoubleArray(env, object, "high");
+          high = getNamedPropertyDoubleArray(env, params, "high");
 
           if (!high) {
             freeWorkData(workData);
@@ -613,7 +619,7 @@ static bool parseWorkData(napi_env env, napi_value object, WorkData *workData, n
         }
 
         if (inputParaminfo->flags & TA_IN_PRICE_LOW) {
-          low = getNamedPropertyDoubleArray(env, object, "low");
+          low = getNamedPropertyDoubleArray(env, params, "low");
 
           if (!low) {
             freeWorkData(workData);
@@ -625,7 +631,7 @@ static bool parseWorkData(napi_env env, napi_value object, WorkData *workData, n
         }
 
         if (inputParaminfo->flags & TA_IN_PRICE_CLOSE) {
-          close = getNamedPropertyDoubleArray(env, object, "close");
+          close = getNamedPropertyDoubleArray(env, params, "close");
 
           if (!close) {
             freeWorkData(workData);
@@ -637,7 +643,7 @@ static bool parseWorkData(napi_env env, napi_value object, WorkData *workData, n
         }
 
         if (inputParaminfo->flags & TA_IN_PRICE_VOLUME) {
-          volume = getNamedPropertyDoubleArray(env, object, "volume");
+          volume = getNamedPropertyDoubleArray(env, params, "volume");
 
           if (!volume) {
             freeWorkData(workData);
@@ -649,7 +655,7 @@ static bool parseWorkData(napi_env env, napi_value object, WorkData *workData, n
         }
 
         if (inputParaminfo->flags & TA_IN_PRICE_OPENINTEREST) {
-          openInterest = getNamedPropertyDoubleArray(env, object, "openInterest");
+          openInterest = getNamedPropertyDoubleArray(env, params, "openInterest");
 
           if (!openInterest) {
             freeWorkData(workData);
@@ -669,7 +675,7 @@ static bool parseWorkData(napi_env env, napi_value object, WorkData *workData, n
         break;
 
       case TA_Input_Real:
-        inReal = getNamedPropertyDoubleArray(env, object, inputParaminfo->paramName);
+        inReal = getNamedPropertyDoubleArray(env, params, inputParaminfo->paramName);
 
         if (!inReal) {
           char errmsg[64] = {0};
@@ -693,7 +699,7 @@ static bool parseWorkData(napi_env env, napi_value object, WorkData *workData, n
         break;
 
       case TA_Input_Integer:
-        inInteger = getNamedPropertyInt32Array(env, object, inputParaminfo->paramName);
+        inInteger = getNamedPropertyInt32Array(env, params, inputParaminfo->paramName);
 
         if (!inInteger) {
           char errmsg[64] = {0};
@@ -724,7 +730,7 @@ static bool parseWorkData(napi_env env, napi_value object, WorkData *workData, n
     switch (optParaminfo->type) {
       case TA_OptInput_RealRange:
       case TA_OptInput_RealList:
-        if (getNamedPropertyDouble(env, object, optParaminfo->paramName, &optInReal)) {
+        if (getNamedPropertyDouble(env, params, optParaminfo->paramName, &optInReal)) {
           if (TA_SUCCESS != (retCode = TA_SetOptInputParamReal(workData->funcParams, i, optInReal))) {
             freeWorkData(workData);
             CHECK(createTAError(env, retCode, error));
@@ -735,7 +741,7 @@ static bool parseWorkData(napi_env env, napi_value object, WorkData *workData, n
 
       case TA_OptInput_IntegerRange:
       case TA_OptInput_IntegerList:
-        if (getNamedPropertyInt32(env, object, optParaminfo->paramName, &optInInteger)) {
+        if (getNamedPropertyInt32(env, params, optParaminfo->paramName, &optInInteger)) {
           if (TA_SUCCESS != (retCode = TA_SetOptInputParamInteger(workData->funcParams, i, optInInteger))) {
             freeWorkData(workData);
             CHECK(createTAError(env, retCode, error));

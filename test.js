@@ -16,6 +16,8 @@ const marketData = JSON.parse(fs.readFileSync("./marketdata.json", "utf8"));
 
 console.log(talib.version());
 
+console.log(talib.MAType.EMA);
+
 console.log(talib.getFunctionGroups());
 
 console.log(talib.getFunctions());
@@ -27,10 +29,12 @@ console.log(
     name: "ADX",
     startIdx: 0,
     endIdx: marketData.close.length - 1,
-    high: marketData.high,
-    low: marketData.low,
-    close: marketData.close,
-    optInTimePeriod: 9,
+    params: {
+      high: marketData.high,
+      low: marketData.low,
+      close: marketData.close,
+      optInTimePeriod: 9,
+    },
   })
 );
 
@@ -39,8 +43,10 @@ console.log(
     name: "SMA",
     startIdx: 0,
     endIdx: marketData.close.length - 1,
-    inReal: marketData.close,
-    optInTimePeriod: 180,
+    params: {
+      inReal: marketData.close,
+      optInTimePeriod: 180,
+    },
   })
 );
 
@@ -49,10 +55,12 @@ talib.execute(
     name: "ADX",
     startIdx: 0,
     endIdx: marketData.close.length - 1,
-    high: marketData.high,
-    low: marketData.low,
-    close: marketData.close,
-    optInTimePeriod: 9,
+    params: {
+      high: marketData.high,
+      low: marketData.low,
+      close: marketData.close,
+      optInTimePeriod: 9,
+    },
   },
   (error, result) => {
     if (error) {

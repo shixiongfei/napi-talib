@@ -9,6 +9,8 @@
  * https://github.com/shixiongfei/napi-talib
  */
 
+export * from "./types.js";
+
 export type InputParameterType = "price" | "real" | "integer";
 
 export type InputFlags =
@@ -75,29 +77,17 @@ export type FuncInfo = {
   outputs: OutputParameterInfo[];
 };
 
-export enum MAType {
-  SMA,
-  EMA,
-  WMA,
-  DEMA,
-  TEMA,
-  TRIMA,
-  KAMA,
-  MAMA,
-  T3,
-}
-
 export type FuncParam = {
   name: string;
   startIdx: number;
   endIdx: number;
-  [parameter: string]: number[] | number;
+  params: { [name: string]: number[] | number };
 };
 
 export type FuncResult = {
   begIndex: number;
   nbElement: number;
-  results: { [parameter: string]: number[] };
+  results: { [name: string]: number[] };
 };
 
 /** Get functions including grouping */
