@@ -10,6 +10,7 @@
  */
 
 export * from "./types.js";
+import { FuncUnstId } from "./types.js";
 
 export type InputParameterType = "price" | "real" | "integer";
 
@@ -95,6 +96,12 @@ export declare function getFunctionGroups(): Record<string, string[]>;
 
 /** Get functions */
 export declare function getFunctions(): string[];
+
+/** Set unstable period function */
+export declare function setUnstablePeriod(
+  funcId: FuncUnstId,
+  period: number
+): void;
 
 /** Get function infomation */
 export declare function explain(funcName: string): FuncInfo;

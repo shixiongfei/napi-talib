@@ -22,6 +22,8 @@ console.log(talib.getFunctionGroups());
 
 console.log(talib.getFunctions());
 
+console.log(talib.setUnstablePeriod(talib.FuncUnstId.EMA, 14));
+
 console.log(talib.explain("ADX"));
 
 console.log(

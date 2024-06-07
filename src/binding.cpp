@@ -10,6 +10,7 @@
  */
 
 #include "ta_abstract.h"
+#include "ta_utility.h"
 #include <vector>
 #include <stdio.h>
 #include <stdlib.h>
@@ -205,6 +206,25 @@ static int *getNamedPropertyInt32Array(napi_env env, napi_value object, const ch
   return numbers;
 }
 
+static napi_status createError(napi_env env, const char *errmsg, napi_value *error) {
+  napi_value value;
+
+  CHECK(napi_create_string_utf8(env, errmsg, NAPI_AUTO_LENGTH, &value));
+  return napi_create_error(env, nullptr, value, error);
+}
+
+static napi_status createTAError(napi_env env, TA_RetCode retCode, napi_value *error) {
+  napi_value errcode, errmsg;
+  
+  TA_RetCodeInfo retCodeInfo;
+  TA_SetRetCodeInfo(retCode, &retCodeInfo);
+
+  CHECK(napi_create_string_utf8(env, retCodeInfo.enumStr, NAPI_AUTO_LENGTH, &errcode));
+  CHECK(napi_create_string_utf8(env, retCodeInfo.infoStr, NAPI_AUTO_LENGTH, &errmsg));
+    
+  return napi_create_error(env, errcode, errmsg, error);
+}
+
 static napi_value getFunctionGroups(napi_env env, napi_callback_info info) {
   napi_value object, array;
   TA_StringTable *groupTable;
@@ -260,9 +280,49 @@ static napi_value getFunctions(napi_env env, napi_callback_info info) {
   return array;
 }
 
+static napi_value setUnstablePeriod(napi_env env, napi_callback_info info) {
+  size_t argc = 2;
+  napi_value argv[2], undefined;
+  napi_valuetype valuetype;
+  TA_RetCode retCode;
+  TA_FuncUnstId funcId;
+  int unstablePeriod;
+
+  CHECK(napi_get_cb_info(env, info, &argc, argv, nullptr, nullptr));
+  CHECK(napi_get_undefined(env, &undefined));
+
+  CHECK(napi_typeof(env, argv[0], &valuetype));
+
+  if (valuetype != napi_number) {
+    napi_throw_type_error(env, nullptr, "The first argument must be a Integer");
+    return undefined;
+  }
+
+  CHECK(napi_typeof(env, argv[1], &valuetype));
+
+  if (valuetype != napi_number) {
+    napi_throw_type_error(env, nullptr, "The second argument must be a Integer");
+    return undefined;
+  }
+
+  CHECK(napi_get_value_int32(env, argv[0], (int *)&funcId));
+  CHECK(napi_get_value_int32(env, argv[1], &unstablePeriod));
+
+  if (TA_SUCCESS != (retCode = TA_SetUnstablePeriod(funcId, unstablePeriod))) {
+    napi_value error;
+
+    CHECK(createTAError(env, retCode, &error));
+    CHECK(napi_throw(env, error));
+
+    return undefined;
+  }
+
+  return undefined;
+}
+
 static napi_value explain(napi_env env, napi_callback_info info) {
   size_t argc = 1;
-  napi_value argv, jsthis, object, inputs, optInputs, outputs;
+  napi_value argv, undefined, object, inputs, optInputs, outputs;
   napi_valuetype valuetype;
   char funcName[64];
   const TA_FuncHandle *funcHandle;
@@ -271,25 +331,23 @@ static napi_value explain(napi_env env, napi_callback_info info) {
   const TA_OptInputParameterInfo *optParaminfo;
   const TA_OutputParameterInfo *outputParaminfo;
 
-  CHECK(napi_get_cb_info(env, info, &argc, &argv, &jsthis, nullptr));
+  CHECK(napi_get_cb_info(env, info, &argc, &argv, nullptr, nullptr));
+  CHECK(napi_get_undefined(env, &undefined));
+
   CHECK(napi_typeof(env, argv, &valuetype));
 
   if (valuetype != napi_string) {
     napi_throw_type_error(env, nullptr, "The argument must be a String");
-    return jsthis;
+    return undefined;
   }
 
   CHECK(napi_get_value_string_utf8(env, argv, funcName, sizeof(funcName), nullptr));
 
-  if (TA_SUCCESS != TA_GetFuncHandle(funcName, &funcHandle)) {
-    CHECK(napi_get_undefined(env, &object));
-    return object;
-  }
+  if (TA_SUCCESS != TA_GetFuncHandle(funcName, &funcHandle))
+    return undefined;
 
-  if (TA_SUCCESS != TA_GetFuncInfo(funcHandle, &funcInfo)) {
-    CHECK(napi_get_undefined(env, &object));
-    return object;
-  }
+  if (TA_SUCCESS != TA_GetFuncInfo(funcHandle, &funcInfo))
+    return undefined;
 
   CHECK(napi_create_object(env, &object));
 
@@ -474,25 +532,6 @@ static napi_value explain(napi_env env, napi_callback_info info) {
   CHECK(napi_set_named_property(env, object, "outputs", outputs));
 
   return object;
-}
-
-static napi_status createError(napi_env env, const char *errmsg, napi_value *error) {
-  napi_value value;
-
-  CHECK(napi_create_string_utf8(env, errmsg, NAPI_AUTO_LENGTH, &value));
-  return napi_create_error(env, nullptr, value, error);
-}
-
-static napi_status createTAError(napi_env env, TA_RetCode retCode, napi_value *error) {
-  napi_value errcode, errmsg;
-  
-  TA_RetCodeInfo retCodeInfo;
-  TA_SetRetCodeInfo(retCode, &retCodeInfo);
-
-  CHECK(napi_create_string_utf8(env, retCodeInfo.enumStr, NAPI_AUTO_LENGTH, &errcode));
-  CHECK(napi_create_string_utf8(env, retCodeInfo.infoStr, NAPI_AUTO_LENGTH, &errmsg));
-    
-  return napi_create_error(env, errcode, errmsg, error);
 }
 
 static void freeWorkData(WorkData *workData) {
@@ -834,14 +873,16 @@ static bool generateResult(napi_env env, const WorkData *workData, napi_value *r
   return true;
 }
 
-static napi_value executeSync(napi_env env, napi_value jsthis, napi_value object) {
-  napi_value result, error;
+static napi_value executeSync(napi_env env, napi_value object) {
+  napi_value result, undefined, error;
   WorkData workData;
+
+  CHECK(napi_get_undefined(env, &undefined));
 
   if (!parseWorkData(env, object, &workData, &error)) {
     freeWorkData(&workData);
     CHECK(napi_throw(env, error));
-    return jsthis;
+    return undefined;
   }
 
   workData.retCode = TA_CallFunc(workData.funcParams, workData.startIdx, workData.endIdx, &workData.outBegIdx, &workData.outNBElement);
@@ -849,7 +890,7 @@ static napi_value executeSync(napi_env env, napi_value jsthis, napi_value object
   if (!generateResult(env, &workData, &result)) {
     freeWorkData(&workData);
     CHECK(napi_throw(env, result));
-    return jsthis;
+    return undefined;
   }
 
   freeWorkData(&workData);
@@ -918,23 +959,24 @@ static napi_value executeAsync(napi_env env, napi_value object, napi_value callb
 
 static napi_value execute(napi_env env, napi_callback_info info) {
   size_t argc = 2;
-  napi_value argv[2], jsthis;
+  napi_value argv[2], undefined;
   napi_valuetype valuetype;
 
-  CHECK(napi_get_cb_info(env, info, &argc, argv, &jsthis, nullptr));
+  CHECK(napi_get_cb_info(env, info, &argc, argv, nullptr, nullptr));
+  CHECK(napi_get_undefined(env, &undefined));
 
   CHECK(napi_typeof(env, argv[0], &valuetype));
 
   if (valuetype != napi_object) {
     napi_throw_type_error(env, nullptr, "The first argument must be a Object");
-    return jsthis;
+    return undefined;
   }
 
   CHECK(napi_typeof(env, argv[1], &valuetype));
 
   return valuetype == napi_function
     ? executeAsync(env, argv[0], argv[1])
-    : executeSync(env, jsthis, argv[0]);
+    : executeSync(env, argv[0]);
 }
 
 static napi_value version(napi_env env, napi_callback_info info) {
@@ -951,6 +993,7 @@ static napi_value init(napi_env env, napi_value exports) {
   napi_property_descriptor props[] = {
     DECLARE_NAPI_METHOD(getFunctionGroups),
     DECLARE_NAPI_METHOD(getFunctions),
+    DECLARE_NAPI_METHOD(setUnstablePeriod),
     DECLARE_NAPI_METHOD(explain),
     DECLARE_NAPI_METHOD(execute),
     DECLARE_NAPI_METHOD(version),
