@@ -35,7 +35,7 @@ static void checkStatus(napi_env env, napi_status status, const char *file, int 
   {name, 0, method, 0, 0, 0, napi_default, 0}
 #define DECLARE_NAPI_METHOD(method) DECLARE_NAPI_METHOD_(#method, method)
 
-typedef struct WorkObject {
+typedef struct WorkData {
   TA_FuncHandle *funcHandle;
   TA_ParamHolder *funcParams;
   TA_RetCode retCode;
@@ -48,7 +48,7 @@ typedef struct WorkObject {
   std::vector<int *> outIntegers;
   std::vector<void *> garbage;
 
-  WorkObject() {
+  WorkData() {
     funcHandle = nullptr;
     funcParams = nullptr;
     retCode = TA_SUCCESS;
@@ -58,7 +58,13 @@ typedef struct WorkObject {
     outBegIdx = 0;
     outNBElement = 0;
   }
-} WorkObject;
+} WorkData;
+
+typedef struct AsyncWorkData {
+  napi_ref cbref;
+  napi_async_work worker;
+  WorkData workData;
+} AsyncWorkData;
 
 static napi_status setArrayString(napi_env env, napi_value array, unsigned int index, const char *string) {
   napi_value value;
@@ -489,33 +495,33 @@ static napi_status createTAError(napi_env env, TA_RetCode retCode, napi_value *e
   return napi_create_error(env, errcode, errmsg, error);
 }
 
-static void freeWorkObject(WorkObject *workObject) {
-  if (workObject->funcParams)
-    TA_ParamHolderFree(workObject->funcParams);
+static void freeWorkData(WorkData *workData) {
+  if (workData->funcParams)
+    TA_ParamHolderFree(workData->funcParams);
 
-  if (workObject->outReals.size() > 0) {
-    for (auto iter = workObject->outReals.begin(); iter != workObject->outReals.end(); iter++)
+  if (workData->outReals.size() > 0) {
+    for (auto iter = workData->outReals.begin(); iter != workData->outReals.end(); iter++)
       free(*iter);
 
-    workObject->outReals.clear();
+    workData->outReals.clear();
   }
 
-  if (workObject->outIntegers.size() > 0) {
-    for (auto iter = workObject->outIntegers.begin(); iter != workObject->outIntegers.end(); iter++)
+  if (workData->outIntegers.size() > 0) {
+    for (auto iter = workData->outIntegers.begin(); iter != workData->outIntegers.end(); iter++)
       free(*iter);
 
-    workObject->outIntegers.clear();
+    workData->outIntegers.clear();
   }
 
-  if (workObject->garbage.size() > 0) {
-    for (auto iter = workObject->garbage.begin(); iter != workObject->garbage.end(); iter++)
+  if (workData->garbage.size() > 0) {
+    for (auto iter = workData->garbage.begin(); iter != workData->garbage.end(); iter++)
       free(*iter);
 
-    workObject->garbage.clear();
+    workData->garbage.clear();
   }
 }
 
-static bool parseWorkObject(napi_env env, napi_value object, WorkObject *workObject, napi_value *error) {
+static bool parseWorkData(napi_env env, napi_value object, WorkData *workData, napi_value *error) {
   char funcName[64] = {0};
   double *open = nullptr;
   double *high = nullptr;
@@ -540,42 +546,42 @@ static bool parseWorkObject(napi_env env, napi_value object, WorkObject *workObj
     return false;
   }
 
-  if (!getNamedPropertyInt32(env, object, "startIdx", &workObject->startIdx)) {
+  if (!getNamedPropertyInt32(env, object, "startIdx", &workData->startIdx)) {
     CHECK(createError(env, "Missing 'startIdx' field", error));
     return false;
   }
 
-  if (!getNamedPropertyInt32(env, object, "endIdx", &workObject->endIdx)) {
+  if (!getNamedPropertyInt32(env, object, "endIdx", &workData->endIdx)) {
     CHECK(createError(env, "Missing 'endIdx' field", error));
     return false;
   }
 
-  if (workObject->startIdx < 0 || workObject->endIdx < 0) {
+  if (workData->startIdx < 0 || workData->endIdx < 0) {
     CHECK(createError(env, "Arguments 'startIdx' and 'endIdx' need to be positive", error));
     return false;
   }
 
-  if (workObject->startIdx > workObject->endIdx) {
+  if (workData->startIdx > workData->endIdx) {
     CHECK(createError(env, "Argument 'startIdx' needs to be smaller than argument 'endIdx'", error));
     return false;
   }
 
-  if (TA_SUCCESS != (retCode = TA_GetFuncHandle(funcName, (const TA_FuncHandle **)&workObject->funcHandle))) {
+  if (TA_SUCCESS != (retCode = TA_GetFuncHandle(funcName, (const TA_FuncHandle **)&workData->funcHandle))) {
     CHECK(createTAError(env, retCode, error));
     return false;
   }
 
-  if (TA_SUCCESS != (retCode = TA_GetFuncInfo(workObject->funcHandle, &funcInfo))) {
+  if (TA_SUCCESS != (retCode = TA_GetFuncInfo(workData->funcHandle, &funcInfo))) {
     CHECK(createTAError(env, retCode, error));
     return false;
   }
 
-  if (TA_SUCCESS != (retCode = TA_ParamHolderAlloc(workObject->funcHandle, &workObject->funcParams))) {
+  if (TA_SUCCESS != (retCode = TA_ParamHolderAlloc(workData->funcHandle, &workData->funcParams))) {
     CHECK(createTAError(env, retCode, error));
     return false;
   }
 
-  workObject->nbOutput = funcInfo->nbOutput;
+  workData->nbOutput = funcInfo->nbOutput;
 
   for (unsigned int i = 0; i < funcInfo->nbInput; ++i) {
     TA_GetInputParameterInfo(funcInfo->handle, i, &inputParaminfo);
@@ -586,76 +592,76 @@ static bool parseWorkObject(napi_env env, napi_value object, WorkObject *workObj
           open = getNamedPropertyDoubleArray(env, object, "open");
 
           if (!open) {
-            freeWorkObject(workObject);
+            freeWorkData(workData);
             CHECK(createError(env, "Missing 'open' field", error));
             return false;
           }
 
-          workObject->garbage.push_back(open);
+          workData->garbage.push_back(open);
         }
 
         if (inputParaminfo->flags & TA_IN_PRICE_HIGH) {
           high = getNamedPropertyDoubleArray(env, object, "high");
 
           if (!high) {
-            freeWorkObject(workObject);
+            freeWorkData(workData);
             CHECK(createError(env, "Missing 'high' field", error));
             return false;
           }
 
-          workObject->garbage.push_back(high);
+          workData->garbage.push_back(high);
         }
 
         if (inputParaminfo->flags & TA_IN_PRICE_LOW) {
           low = getNamedPropertyDoubleArray(env, object, "low");
 
           if (!low) {
-            freeWorkObject(workObject);
+            freeWorkData(workData);
             CHECK(createError(env, "Missing 'low' field", error));
             return false;
           }
 
-          workObject->garbage.push_back(low);
+          workData->garbage.push_back(low);
         }
 
         if (inputParaminfo->flags & TA_IN_PRICE_CLOSE) {
           close = getNamedPropertyDoubleArray(env, object, "close");
 
           if (!close) {
-            freeWorkObject(workObject);
+            freeWorkData(workData);
             CHECK(createError(env, "Missing 'close' field", error));
             return false;
           }
 
-          workObject->garbage.push_back(close);
+          workData->garbage.push_back(close);
         }
 
         if (inputParaminfo->flags & TA_IN_PRICE_VOLUME) {
           volume = getNamedPropertyDoubleArray(env, object, "volume");
 
           if (!volume) {
-            freeWorkObject(workObject);
+            freeWorkData(workData);
             CHECK(createError(env, "Missing 'volume' field", error));
             return false;
           }
 
-          workObject->garbage.push_back(volume);
+          workData->garbage.push_back(volume);
         }
 
         if (inputParaminfo->flags & TA_IN_PRICE_OPENINTEREST) {
           openInterest = getNamedPropertyDoubleArray(env, object, "openInterest");
 
           if (!openInterest) {
-            freeWorkObject(workObject);
+            freeWorkData(workData);
             CHECK(createError(env, "Missing 'openInterest' field", error));
             return false;
           }
 
-          workObject->garbage.push_back(openInterest);
+          workData->garbage.push_back(openInterest);
         }
 
-        if (TA_SUCCESS != (retCode = TA_SetInputParamPricePtr(workObject->funcParams, i, open, high, low, close, volume, openInterest))) {
-          freeWorkObject(workObject);
+        if (TA_SUCCESS != (retCode = TA_SetInputParamPricePtr(workData->funcParams, i, open, high, low, close, volume, openInterest))) {
+          freeWorkData(workData);
           CHECK(createTAError(env, retCode, error));
           return false;
         }
@@ -668,18 +674,18 @@ static bool parseWorkObject(napi_env env, napi_value object, WorkObject *workObj
         if (!inReal) {
           char errmsg[64] = {0};
 
-          freeWorkObject(workObject);
+          freeWorkData(workData);
           snprintf(errmsg, sizeof(errmsg), "Missing '%s' field", inputParaminfo->paramName);
           CHECK(createError(env, errmsg, error));
           return false;
         }
 
-        workObject->garbage.push_back(inReal);
+        workData->garbage.push_back(inReal);
 
-        retCode = TA_SetInputParamRealPtr(workObject->funcParams, i, inReal);
+        retCode = TA_SetInputParamRealPtr(workData->funcParams, i, inReal);
 
         if (TA_SUCCESS != retCode) {
-          freeWorkObject(workObject);
+          freeWorkData(workData);
           CHECK(createTAError(env, retCode, error));
           return false;
         }
@@ -692,18 +698,18 @@ static bool parseWorkObject(napi_env env, napi_value object, WorkObject *workObj
         if (!inInteger) {
           char errmsg[64] = {0};
 
-          freeWorkObject(workObject);
+          freeWorkData(workData);
           snprintf(errmsg, sizeof(errmsg), "Missing '%s' field", inputParaminfo->paramName);
           CHECK(createError(env, errmsg, error));
           return false;
         }
 
-        workObject->garbage.push_back(inInteger);
+        workData->garbage.push_back(inInteger);
 
-        retCode = TA_SetInputParamIntegerPtr(workObject->funcParams, i, inInteger);
+        retCode = TA_SetInputParamIntegerPtr(workData->funcParams, i, inInteger);
 
         if (TA_SUCCESS != retCode) {
-          freeWorkObject(workObject);
+          freeWorkData(workData);
           CHECK(createTAError(env, retCode, error));
           return false;
         }
@@ -719,8 +725,8 @@ static bool parseWorkObject(napi_env env, napi_value object, WorkObject *workObj
       case TA_OptInput_RealRange:
       case TA_OptInput_RealList:
         if (getNamedPropertyDouble(env, object, optParaminfo->paramName, &optInReal)) {
-          if (TA_SUCCESS != (retCode = TA_SetOptInputParamReal(workObject->funcParams, i, optInReal))) {
-            freeWorkObject(workObject);
+          if (TA_SUCCESS != (retCode = TA_SetOptInputParamReal(workData->funcParams, i, optInReal))) {
+            freeWorkData(workData);
             CHECK(createTAError(env, retCode, error));
             return false;
           }
@@ -730,8 +736,8 @@ static bool parseWorkObject(napi_env env, napi_value object, WorkObject *workObj
       case TA_OptInput_IntegerRange:
       case TA_OptInput_IntegerList:
         if (getNamedPropertyInt32(env, object, optParaminfo->paramName, &optInInteger)) {
-          if (TA_SUCCESS != (retCode = TA_SetOptInputParamInteger(workObject->funcParams, i, optInInteger))) {
-            freeWorkObject(workObject);
+          if (TA_SUCCESS != (retCode = TA_SetOptInputParamInteger(workData->funcParams, i, optInInteger))) {
+            freeWorkData(workData);
             CHECK(createTAError(env, retCode, error));
             return false;
           }
@@ -745,19 +751,19 @@ static bool parseWorkObject(napi_env env, napi_value object, WorkObject *workObj
 
     switch (outputParaminfo->type) {
       case TA_Output_Real:
-        outReal = (double *)malloc(sizeof(double) * (workObject->endIdx - workObject->startIdx + 1));
+        outReal = (double *)malloc(sizeof(double) * (workData->endIdx - workData->startIdx + 1));
 
         if (!outReal) {
-          freeWorkObject(workObject);
+          freeWorkData(workData);
           CHECK(createError(env, "Out of memory", error));
           return false;
         }
 
-        memset(outReal, 0, sizeof(double) * (workObject->endIdx - workObject->startIdx + 1));
-        workObject->outReals.push_back(outReal);
+        memset(outReal, 0, sizeof(double) * (workData->endIdx - workData->startIdx + 1));
+        workData->outReals.push_back(outReal);
 
-        if (TA_SUCCESS != (retCode = TA_SetOutputParamRealPtr(workObject->funcParams, i, outReal))) {
-          freeWorkObject(workObject);
+        if (TA_SUCCESS != (retCode = TA_SetOutputParamRealPtr(workData->funcParams, i, outReal))) {
+          freeWorkData(workData);
           CHECK(createTAError(env, retCode, error));
           return false;
         }
@@ -765,19 +771,19 @@ static bool parseWorkObject(napi_env env, napi_value object, WorkObject *workObj
         break;
 
       case TA_Output_Integer:
-        outInteger = (int *)malloc(sizeof(int) * (workObject->endIdx - workObject->startIdx + 1));
+        outInteger = (int *)malloc(sizeof(int) * (workData->endIdx - workData->startIdx + 1));
 
         if (!outInteger) {
-          freeWorkObject(workObject);
+          freeWorkData(workData);
           CHECK(createError(env, "Out of memory", error));
           return false;
         }
 
-        memset(outInteger, 0, sizeof(int) * (workObject->endIdx - workObject->startIdx + 1));
-        workObject->outIntegers.push_back(outInteger);
+        memset(outInteger, 0, sizeof(int) * (workData->endIdx - workData->startIdx + 1));
+        workData->outIntegers.push_back(outInteger);
 
-        if (TA_SUCCESS != (retCode = TA_SetOutputParamIntegerPtr(workObject->funcParams, i, outInteger))) {
-          freeWorkObject(workObject);
+        if (TA_SUCCESS != (retCode = TA_SetOutputParamIntegerPtr(workData->funcParams, i, outInteger))) {
+          freeWorkData(workData);
           CHECK(createTAError(env, retCode, error));
           return false;
         }
@@ -789,7 +795,7 @@ static bool parseWorkObject(napi_env env, napi_value object, WorkObject *workObj
   return true;
 }
 
-static bool generateResult(napi_env env, const WorkObject *workObject, napi_value *result) {
+static bool generateResult(napi_env env, const WorkData *workData, napi_value *result) {
   napi_value object, array;
   int outRealIdx = 0;
   int outIntegerIdx = 0;
@@ -797,35 +803,35 @@ static bool generateResult(napi_env env, const WorkObject *workObject, napi_valu
   int *outInteger;
   const TA_OutputParameterInfo *outputParaminfo;
 
-  if (TA_SUCCESS != workObject->retCode) {
-    CHECK(createTAError(env, workObject->retCode, result));
+  if (TA_SUCCESS != workData->retCode) {
+    CHECK(createTAError(env, workData->retCode, result));
     return false;
   }
 
   CHECK(napi_create_object(env, result));
   CHECK(napi_create_object(env, &object));
 
-  CHECK(setNamedPropertyInt32(env, *result, "begIndex", workObject->outBegIdx));
-  CHECK(setNamedPropertyInt32(env, *result, "nbElement", workObject->outNBElement));
+  CHECK(setNamedPropertyInt32(env, *result, "begIndex", workData->outBegIdx));
+  CHECK(setNamedPropertyInt32(env, *result, "nbElement", workData->outNBElement));
 
-  for (unsigned int i = 0; i < workObject->nbOutput; ++i) {
-    TA_GetOutputParameterInfo(workObject->funcHandle, i, &outputParaminfo);
+  for (unsigned int i = 0; i < workData->nbOutput; ++i) {
+    TA_GetOutputParameterInfo(workData->funcHandle, i, &outputParaminfo);
 
-    CHECK(napi_create_array_with_length(env, workObject->outNBElement, &array));
+    CHECK(napi_create_array_with_length(env, workData->outNBElement, &array));
 
     switch (outputParaminfo->type) {
       case TA_Output_Real:
-        outReal = workObject->outReals[outRealIdx++];
+        outReal = workData->outReals[outRealIdx++];
 
-        for (int j = 0; j < workObject->outNBElement; ++j)
+        for (int j = 0; j < workData->outNBElement; ++j)
           CHECK(setArrayDouble(env, array, j, outReal[j]));
 
         break;
 
       case TA_Output_Integer:
-        outInteger = workObject->outIntegers[outIntegerIdx++];
+        outInteger = workData->outIntegers[outIntegerIdx++];
 
-        for (int j = 0; j < workObject->outNBElement; ++j)
+        for (int j = 0; j < workData->outNBElement; ++j)
           CHECK(setArrayInt32(env, array, j, outInteger[j]));
 
         break;
@@ -841,42 +847,80 @@ static bool generateResult(napi_env env, const WorkObject *workObject, napi_valu
 
 static napi_value executeSync(napi_env env, napi_value jsthis, napi_value object) {
   napi_value result, error;
-  WorkObject workObject;
+  WorkData workData;
 
-  if (!parseWorkObject(env, object, &workObject, &error)) {
+  if (!parseWorkData(env, object, &workData, &error)) {
     CHECK(napi_throw(env, error));
     return jsthis;
   }
 
-  workObject.retCode = TA_CallFunc(workObject.funcParams, workObject.startIdx, workObject.endIdx, &workObject.outBegIdx, &workObject.outNBElement);
+  workData.retCode = TA_CallFunc(workData.funcParams, workData.startIdx, workData.endIdx, &workData.outBegIdx, &workData.outNBElement);
 
-  if (!generateResult(env, &workObject, &result)) {
-    freeWorkObject(&workObject);
+  if (!generateResult(env, &workData, &result)) {
+    freeWorkData(&workData);
     CHECK(napi_throw(env, result));
     return jsthis;
   }
 
-  freeWorkObject(&workObject);
+  freeWorkData(&workData);
   return result;
+}
+
+static void executeAsyncCallback(napi_env env, void *data) {
+  AsyncWorkData *asyncWorkData = (AsyncWorkData *)data;
+  WorkData *workData = &asyncWorkData->workData;
+
+  workData->retCode = TA_CallFunc(workData->funcParams, workData->startIdx, workData->endIdx, &workData->outBegIdx, &workData->outNBElement);
+}
+
+static void executeAsyncComplete(napi_env env, napi_status status, void *data) {
+  AsyncWorkData *asyncWorkData = (AsyncWorkData *)data;
+  napi_value undefined, callback, argv[2];
+
+  CHECK(status);
+  CHECK(napi_get_undefined(env, &undefined));
+  CHECK(napi_get_reference_value(env, asyncWorkData->cbref, &callback));
+
+  argv[0] = undefined;
+
+  if (!generateResult(env, &asyncWorkData->workData, &argv[1])) {
+    argv[0] = argv[1];
+    argv[1] = undefined;
+  }
+
+  CHECK(napi_call_function(env, undefined, callback, 2, argv, nullptr));
+
+  CHECK(napi_delete_reference(env, asyncWorkData->cbref));
+  CHECK(napi_delete_async_work(env, asyncWorkData->worker));
+
+  freeWorkData(&asyncWorkData->workData);
+  delete asyncWorkData;
 }
 
 static napi_value executeAsync(napi_env env, napi_value object, napi_value callback) {
   napi_value undefined, argv[2];
-  WorkObject workObject;
+  AsyncWorkData *asyncWorkData = new AsyncWorkData();
 
   CHECK(napi_get_undefined(env, &undefined));
 
-  if (!parseWorkObject(env, object, &workObject, &argv[0])) {
+  if (!asyncWorkData) {
+    napi_throw_type_error(env, nullptr, "Out of memory");
+    return undefined;
+  }
+
+  if (!parseWorkData(env, object, &asyncWorkData->workData, &argv[0])) {
     argv[1] = undefined;
+
+    freeWorkData(&asyncWorkData->workData);
+    delete asyncWorkData
+
     CHECK(napi_call_function(env, undefined, callback, 2, argv, nullptr));
     return undefined;
   }
 
-  argv[0] = undefined;
-  argv[1] = undefined;
-  
-  freeWorkObject(&workObject);
-  CHECK(napi_call_function(env, undefined, callback, 2, argv, nullptr));
+  CHECK(napi_create_reference(env, callback, 1, &asyncWorkData->cbref));
+  CHECK(napi_create_async_work(env, nullptr, nullptr, executeAsyncCallback, executeAsyncComplete, asyncWorkData, &asyncWorkData->worker));
+  CHECK(napi_queue_async_work(env, asyncWorkData->worker));
 
   return undefined;
 }

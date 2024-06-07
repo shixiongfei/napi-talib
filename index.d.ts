@@ -109,8 +109,14 @@ export declare function getFunctions(): string[];
 /** Get function infomation */
 export declare function explain(funcName: string): FuncInfo;
 
-/** Execute function */
+/** Execute sync function */
 export declare function execute(param: FuncParam): FuncResult;
+
+/** Execute async function */
+export declare function execute(
+  param: FuncParam,
+  callback: (error: Error, result: FuncResult) => void
+): void;
 
 /** Get TA-Lib version */
 export declare function version(): string;
