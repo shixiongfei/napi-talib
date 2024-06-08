@@ -14,6 +14,15 @@ const talib = require(".");
 const { ADX } = require("./functions");
 const { SMA } = require("./promises.js");
 
+/*
+ * In real projects, it can be written like this
+ *
+ * import talib from "napi-talib";
+ * import { ADX } from "napi-talib/funcs";
+ * import { SMA } from "napi-talib/funcs/promise";
+ *
+ */
+
 const marketData = JSON.parse(fs.readFileSync("./marketdata.json", "utf8"));
 
 console.log(talib.version());
