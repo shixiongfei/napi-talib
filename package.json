@@ -1,6 +1,6 @@
 {
   "name": "napi-talib",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Node API for TA-Lib",
   "main": "index.js",
   "types": "index.d.ts",
