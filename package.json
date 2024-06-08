@@ -23,6 +23,7 @@
     "tsconfig.json"
   ],
   "exports": {
+    ".": "./index.js",
     "./funcs": "./functions.js",
     "./funcs/promise": "./promises.js"
   },
