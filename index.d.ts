@@ -112,7 +112,7 @@ export declare function execute(param: FuncParam): FuncResult;
 /** Execute async function */
 export declare function execute(
   param: FuncParam,
-  callback: (error: Error, result: FuncResult) => void
+  callback: (error: Error | undefined, result: FuncResult) => void
 ): void;
 
 /** Get TA-Lib version */

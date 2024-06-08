@@ -27,7 +27,7 @@
     "./funcs/promise": "./promises.js"
   },
   "scripts": {
-    "gencodes": "tsc && node gencodes.js && tsc",
+    "gencodes": "rimraf functions.* && rimraf promises.* && tsc && node gencodes.js && tsc",
     "build": "node-gyp clean && node-gyp configure && node-gyp build && npm run gencodes",
     "build:debug": "node-gyp clean && node-gyp configure && node-gyp build --debug && npm run gencodes",
     "install": "node-gyp configure && node-gyp build",
@@ -54,6 +54,7 @@
   "devDependencies": {
     "@types/node": "^20.14.2",
     "node-gyp": "^10.1.0",
+    "rimraf": "^5.0.7",
     "typescript": "^5.4.5"
   }
 }
