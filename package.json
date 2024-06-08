@@ -28,7 +28,10 @@
     "./funcs/promise": "./promises.js"
   },
   "scripts": {
-    "gencodes": "rimraf functions.* && rimraf promises.* && tsc && node gencodes.js && tsc",
+    "clean:functions": "rimraf functions.ts && rimraf functions.js && rimraf functions.d.ts",
+    "clean:promises": "rimraf promises.ts && rimraf promises.js && rimraf promises.d.ts",
+    "clean": "npm run clean:functions && npm run clean:promises",
+    "gencodes": "npm run clean && tsc && node gencodes.js && tsc",
     "build": "node-gyp clean && node-gyp configure && node-gyp build && npm run gencodes",
     "build:debug": "node-gyp clean && node-gyp configure && node-gyp build --debug && npm run gencodes",
     "install": "node-gyp configure && node-gyp build",
