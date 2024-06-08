@@ -10,7 +10,7 @@
  */
 
 export * from "./types.js";
-import { FuncUnstId } from "./types.js";
+import { Compatibility, FuncUnstId } from "./types.js";
 
 export type InputParameterType = "price" | "real" | "integer";
 
@@ -102,6 +102,9 @@ export declare function setUnstablePeriod(
   funcId: FuncUnstId,
   period: number
 ): void;
+
+/** Set compatibility function */
+export declare function setCompatibility(value: Compatibility): void;
 
 /** Get function infomation */
 export declare function explain(funcName: string): FuncInfo;

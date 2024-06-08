@@ -12,7 +12,7 @@
 const fs = require("node:fs");
 const talib = require(".");
 const { ADX } = require("./functions");
-const { SMA } = require("./promises.js");
+const { SMA, EMA } = require("./promises.js");
 
 /*
  * In real projects, it can be written like this
@@ -33,11 +33,14 @@ console.log(talib.getFunctionGroups());
 
 console.log(talib.getFunctions());
 
-console.log(talib.setUnstablePeriod(talib.FuncUnstId.EMA, 14));
+console.log(talib.setUnstablePeriod(talib.FuncUnstId.MAMA, 14));
+
+console.log(talib.setCompatibility(talib.Compatibility.METASTOCK));
 
 console.log(talib.explain("ADX"));
 
 console.log(
+  // Synchronous call
   talib.execute({
     name: "ADX",
     startIdx: 0,
@@ -52,13 +55,15 @@ console.log(
 );
 
 console.log(
+  // Synchronous call
   ADX(marketData.high, marketData.low, marketData.close, {
     optInTimePeriod: 9,
   })
 );
 
-console.log(
-  talib.execute({
+// Asynchronous call
+talib.execute(
+  {
     name: "SMA",
     startIdx: 0,
     endIdx: marketData.close.length - 1,
@@ -66,9 +71,21 @@ console.log(
       inReal: marketData.close,
       optInTimePeriod: 180,
     },
-  })
+  },
+  (error, results) => {
+    if (error) {
+      console.error(error.message);
+    } else {
+      console.log(results);
+    }
+  }
 );
 
-SMA(marketData.close, { optInTimePeriod: 180 }).then((sma) => {
-  console.log(sma);
+// Parallel computing
+Promise.all([
+  SMA(marketData.close, { optInTimePeriod: 5 }),
+  EMA(marketData.close, { optInTimePeriod: 5 }),
+]).then(([sma, ema]) => {
+  console.log("SMA:", sma);
+  console.log("EMA:", ema);
 });

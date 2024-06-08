@@ -9,6 +9,7 @@
  * https://github.com/shixiongfei/napi-talib
  */
 
+#include "ta_func.h"
 #include "ta_abstract.h"
 #include "ta_utility.h"
 #include <vector>
@@ -309,6 +310,37 @@ static napi_value setUnstablePeriod(napi_env env, napi_callback_info info) {
   CHECK(napi_get_value_int32(env, argv[1], &unstablePeriod));
 
   if (TA_SUCCESS != (retCode = TA_SetUnstablePeriod(funcId, unstablePeriod))) {
+    napi_value error;
+
+    CHECK(createTAError(env, retCode, &error));
+    CHECK(napi_throw(env, error));
+
+    return undefined;
+  }
+
+  return undefined;
+}
+
+static napi_value setCompatibility(napi_env env, napi_callback_info info) {
+  size_t argc = 1;
+  napi_value argv, undefined;
+  napi_valuetype valuetype;
+  TA_RetCode retCode;
+  TA_Compatibility value;
+
+  CHECK(napi_get_cb_info(env, info, &argc, &argv, nullptr, nullptr));
+  CHECK(napi_get_undefined(env, &undefined));
+
+  CHECK(napi_typeof(env, argv, &valuetype));
+
+  if (valuetype != napi_number) {
+    napi_throw_type_error(env, nullptr, "The argument must be a Integer");
+    return undefined;
+  }
+
+  CHECK(napi_get_value_int32(env, argv, (int *)&value));
+
+  if (TA_SUCCESS != (retCode = TA_SetCompatibility(value))) {
     napi_value error;
 
     CHECK(createTAError(env, retCode, &error));
@@ -994,6 +1026,7 @@ static napi_value init(napi_env env, napi_value exports) {
     DECLARE_NAPI_METHOD(getFunctionGroups),
     DECLARE_NAPI_METHOD(getFunctions),
     DECLARE_NAPI_METHOD(setUnstablePeriod),
+    DECLARE_NAPI_METHOD(setCompatibility),
     DECLARE_NAPI_METHOD(explain),
     DECLARE_NAPI_METHOD(execute),
     DECLARE_NAPI_METHOD(version),

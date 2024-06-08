@@ -49,3 +49,8 @@ export enum FuncUnstId {
   T3,
   ALL,
 }
+
+export enum Compatibility {
+  DEFAULT,
+  METASTOCK,
+}
