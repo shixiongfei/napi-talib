@@ -11,6 +11,8 @@
 
 const fs = require("node:fs");
 const talib = require(".");
+const { ADX } = require("./functions");
+const { SMA } = require("./promises.js");
 
 const marketData = JSON.parse(fs.readFileSync("./marketdata.json", "utf8"));
 
@@ -41,6 +43,12 @@ console.log(
 );
 
 console.log(
+  ADX(marketData.high, marketData.low, marketData.close, {
+    optInTimePeriod: 9,
+  })
+);
+
+console.log(
   talib.execute({
     name: "SMA",
     startIdx: 0,
@@ -52,23 +60,6 @@ console.log(
   })
 );
 
-talib.execute(
-  {
-    name: "ADX",
-    startIdx: 0,
-    endIdx: marketData.close.length - 1,
-    params: {
-      high: marketData.high,
-      low: marketData.low,
-      close: marketData.close,
-      optInTimePeriod: 9,
-    },
-  },
-  (error, result) => {
-    if (error) {
-      console.error(error.message);
-    } else {
-      console.log(result);
-    }
-  }
-);
+SMA(marketData.close, { optInTimePeriod: 180 }).then((sma) => {
+  console.log(sma);
+});

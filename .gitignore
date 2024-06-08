@@ -6,3 +6,6 @@ types.d.ts
 functions.ts
 functions.js
 functions.d.ts
+promises.ts
+promises.js
+promises.d.ts

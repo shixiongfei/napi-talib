@@ -13,16 +13,23 @@
     "functions.ts",
     "functions.js",
     "functions.d.ts",
+    "promises.ts",
+    "promises.js",
+    "promises.d.ts",
     "types.ts",
     "types.js",
     "types.d.ts",
     "binding.gyp",
     "tsconfig.json"
   ],
+  "exports": {
+    "./funcs": "./functions.js",
+    "./funcs/promise": "./promises.js"
+  },
   "scripts": {
-    "gencodes": "node gencodes.js && tsc",
-    "build": "node-gyp clean && node-gyp configure && node-gyp build && tsc",
-    "build:debug": "node-gyp clean && node-gyp configure && node-gyp build --debug && tsc",
+    "gencodes": "tsc && node gencodes.js && tsc",
+    "build": "node-gyp clean && node-gyp configure && node-gyp build && npm run gencodes",
+    "build:debug": "node-gyp clean && node-gyp configure && node-gyp build --debug && npm run gencodes",
     "install": "node-gyp configure && node-gyp build",
     "test": "node test.js"
   },
