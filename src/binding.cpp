@@ -33,8 +33,7 @@ static void checkStatus(napi_env env, napi_status status, const char *file, int 
 }
 #define CHECK(__expression__) checkStatus(env, __expression__, __FILE__, __LINE__)
 
-#define DECLARE_NAPI_METHOD_(name, method)                                     \
-  {name, 0, method, 0, 0, 0, napi_default, 0}
+#define DECLARE_NAPI_METHOD_(name, method) { name, 0, method, 0, 0, 0, napi_default, 0 }
 #define DECLARE_NAPI_METHOD(method) DECLARE_NAPI_METHOD_(#method, method)
 
 typedef struct WorkData {
@@ -512,6 +511,7 @@ static napi_value explain(napi_env env, napi_callback_info info) {
       case TA_Output_Real:
         CHECK(setNamedPropertyString(env, param, "type", "real"));
         break;
+
       case TA_Output_Integer:
         CHECK(setNamedPropertyString(env, param, "type", "integer"));
         break;
