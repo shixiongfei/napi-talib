@@ -1,7 +1,7 @@
 /*
  * binding.cpp
  *
- * Copyright (c) 2024 Xiongfei Shi
+ * Copyright (c) 2024-2025 Xiongfei Shi
  *
  * Author: Xiongfei Shi <xiongfei.shi(a)icloud.com>
  * License: Apache-2.0
@@ -9,14 +9,14 @@
  * https://github.com/shixiongfei/napi-talib
  */
 
-#include "ta_func.h"
 #include "ta_abstract.h"
+#include "ta_func.h"
 #include "ta_utility.h"
-#include <vector>
+#include <node_api.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <node_api.h>
+#include <vector>
 
 #define arraysize(a) ((int)(sizeof(a) / sizeof(*a)))
 
@@ -33,7 +33,7 @@ static void checkStatus(napi_env env, napi_status status, const char *file, int 
 }
 #define CHECK(__expression__) checkStatus(env, __expression__, __FILE__, __LINE__)
 
-#define DECLARE_NAPI_METHOD_(name, method) { name, 0, method, 0, 0, 0, napi_default, 0 }
+#define DECLARE_NAPI_METHOD_(name, method) {name, 0, method, 0, 0, 0, napi_default, 0}
 #define DECLARE_NAPI_METHOD(method) DECLARE_NAPI_METHOD_(#method, method)
 
 typedef struct WorkData {
@@ -215,13 +215,13 @@ static napi_status createError(napi_env env, const char *errmsg, napi_value *err
 
 static napi_status createTAError(napi_env env, TA_RetCode retCode, napi_value *error) {
   napi_value errcode, errmsg;
-  
+
   TA_RetCodeInfo retCodeInfo;
   TA_SetRetCodeInfo(retCode, &retCodeInfo);
 
   CHECK(napi_create_string_utf8(env, retCodeInfo.enumStr, NAPI_AUTO_LENGTH, &errcode));
   CHECK(napi_create_string_utf8(env, retCodeInfo.infoStr, NAPI_AUTO_LENGTH, &errmsg));
-    
+
   return napi_create_error(env, errcode, errmsg, error);
 }
 
@@ -400,17 +400,17 @@ static napi_value explain(napi_env env, napi_callback_info info) {
     CHECK(setNamedPropertyString(env, param, "name", inputParaminfo->paramName));
 
     switch (inputParaminfo->type) {
-      case TA_Input_Price:
-        CHECK(setNamedPropertyString(env, param, "type", "price"));
-        break;
+    case TA_Input_Price:
+      CHECK(setNamedPropertyString(env, param, "type", "price"));
+      break;
 
-      case TA_Input_Real:
-        CHECK(setNamedPropertyString(env, param, "type", "real"));
-        break;
+    case TA_Input_Real:
+      CHECK(setNamedPropertyString(env, param, "type", "real"));
+      break;
 
-      case TA_Input_Integer:
-        CHECK(setNamedPropertyString(env, param, "type", "integer"));
-        break;
+    case TA_Input_Integer:
+      CHECK(setNamedPropertyString(env, param, "type", "integer"));
+      break;
     }
 
     if (inputParaminfo->flags & TA_IN_PRICE_OPEN)
@@ -458,21 +458,21 @@ static napi_value explain(napi_env env, napi_callback_info info) {
     CHECK(setNamedPropertyString(env, param, "hint", optParaminfo->hint));
 
     switch (optParaminfo->type) {
-      case TA_OptInput_RealRange:
-        CHECK(setNamedPropertyString(env, param, "type", "real_range"));
-        break;
+    case TA_OptInput_RealRange:
+      CHECK(setNamedPropertyString(env, param, "type", "real_range"));
+      break;
 
-      case TA_OptInput_RealList:
-        CHECK(setNamedPropertyString(env, param, "type", "real_list"));
-        break;
+    case TA_OptInput_RealList:
+      CHECK(setNamedPropertyString(env, param, "type", "real_list"));
+      break;
 
-      case TA_OptInput_IntegerRange:
-        CHECK(setNamedPropertyString(env, param, "type", "integer_range"));
-        break;
+    case TA_OptInput_IntegerRange:
+      CHECK(setNamedPropertyString(env, param, "type", "integer_range"));
+      break;
 
-      case TA_OptInput_IntegerList:
-        CHECK(setNamedPropertyString(env, param, "type", "integer_list"));
-        break;
+    case TA_OptInput_IntegerList:
+      CHECK(setNamedPropertyString(env, param, "type", "integer_list"));
+      break;
     }
 
     if (optParaminfo->flags & TA_OPTIN_IS_PERCENT)
@@ -508,13 +508,13 @@ static napi_value explain(napi_env env, napi_callback_info info) {
     CHECK(setNamedPropertyString(env, param, "name", outputParaminfo->paramName));
 
     switch (outputParaminfo->type) {
-      case TA_Output_Real:
-        CHECK(setNamedPropertyString(env, param, "type", "real"));
-        break;
+    case TA_Output_Real:
+      CHECK(setNamedPropertyString(env, param, "type", "real"));
+      break;
 
-      case TA_Output_Integer:
-        CHECK(setNamedPropertyString(env, param, "type", "integer"));
-        break;
+    case TA_Output_Integer:
+      CHECK(setNamedPropertyString(env, param, "type", "integer"));
+      break;
     }
 
     if (outputParaminfo->flags & TA_OUT_LINE)
@@ -666,121 +666,121 @@ static bool parseWorkData(napi_env env, napi_value object, WorkData *workData, n
     TA_GetInputParameterInfo(funcInfo->handle, i, &inputParaminfo);
 
     switch (inputParaminfo->type) {
-      case TA_Input_Price:
-        if (inputParaminfo->flags & TA_IN_PRICE_OPEN) {
-          open = getNamedPropertyDoubleArray(env, params, "open");
+    case TA_Input_Price:
+      if (inputParaminfo->flags & TA_IN_PRICE_OPEN) {
+        open = getNamedPropertyDoubleArray(env, params, "open");
 
-          if (!open) {
-            CHECK(createError(env, "Missing 'open' field", error));
-            return false;
-          }
-
-          workData->garbage.push_back(open);
-        }
-
-        if (inputParaminfo->flags & TA_IN_PRICE_HIGH) {
-          high = getNamedPropertyDoubleArray(env, params, "high");
-
-          if (!high) {
-            CHECK(createError(env, "Missing 'high' field", error));
-            return false;
-          }
-
-          workData->garbage.push_back(high);
-        }
-
-        if (inputParaminfo->flags & TA_IN_PRICE_LOW) {
-          low = getNamedPropertyDoubleArray(env, params, "low");
-
-          if (!low) {
-            CHECK(createError(env, "Missing 'low' field", error));
-            return false;
-          }
-
-          workData->garbage.push_back(low);
-        }
-
-        if (inputParaminfo->flags & TA_IN_PRICE_CLOSE) {
-          close = getNamedPropertyDoubleArray(env, params, "close");
-
-          if (!close) {
-            CHECK(createError(env, "Missing 'close' field", error));
-            return false;
-          }
-
-          workData->garbage.push_back(close);
-        }
-
-        if (inputParaminfo->flags & TA_IN_PRICE_VOLUME) {
-          volume = getNamedPropertyDoubleArray(env, params, "volume");
-
-          if (!volume) {
-            CHECK(createError(env, "Missing 'volume' field", error));
-            return false;
-          }
-
-          workData->garbage.push_back(volume);
-        }
-
-        if (inputParaminfo->flags & TA_IN_PRICE_OPENINTEREST) {
-          openInterest = getNamedPropertyDoubleArray(env, params, "openInterest");
-
-          if (!openInterest) {
-            CHECK(createError(env, "Missing 'openInterest' field", error));
-            return false;
-          }
-
-          workData->garbage.push_back(openInterest);
-        }
-
-        if (TA_SUCCESS != (retCode = TA_SetInputParamPricePtr(workData->funcParams, i, open, high, low, close, volume, openInterest))) {
-          CHECK(createTAError(env, retCode, error));
+        if (!open) {
+          CHECK(createError(env, "Missing 'open' field", error));
           return false;
         }
 
-        break;
+        workData->garbage.push_back(open);
+      }
 
-      case TA_Input_Real:
-        inReal = getNamedPropertyDoubleArray(env, params, inputParaminfo->paramName);
+      if (inputParaminfo->flags & TA_IN_PRICE_HIGH) {
+        high = getNamedPropertyDoubleArray(env, params, "high");
 
-        if (!inReal) {
-          char errmsg[64] = {0};
-
-          snprintf(errmsg, sizeof(errmsg), "Missing '%s' field", inputParaminfo->paramName);
-          CHECK(createError(env, errmsg, error));
-
+        if (!high) {
+          CHECK(createError(env, "Missing 'high' field", error));
           return false;
         }
 
-        workData->garbage.push_back(inReal);
+        workData->garbage.push_back(high);
+      }
 
-        if (TA_SUCCESS != (retCode = TA_SetInputParamRealPtr(workData->funcParams, i, inReal))) {
-          CHECK(createTAError(env, retCode, error));
+      if (inputParaminfo->flags & TA_IN_PRICE_LOW) {
+        low = getNamedPropertyDoubleArray(env, params, "low");
+
+        if (!low) {
+          CHECK(createError(env, "Missing 'low' field", error));
           return false;
         }
 
-        break;
+        workData->garbage.push_back(low);
+      }
 
-      case TA_Input_Integer:
-        inInteger = getNamedPropertyInt32Array(env, params, inputParaminfo->paramName);
+      if (inputParaminfo->flags & TA_IN_PRICE_CLOSE) {
+        close = getNamedPropertyDoubleArray(env, params, "close");
 
-        if (!inInteger) {
-          char errmsg[64] = {0};
-
-          snprintf(errmsg, sizeof(errmsg), "Missing '%s' field", inputParaminfo->paramName);
-          CHECK(createError(env, errmsg, error));
-
+        if (!close) {
+          CHECK(createError(env, "Missing 'close' field", error));
           return false;
         }
 
-        workData->garbage.push_back(inInteger);
+        workData->garbage.push_back(close);
+      }
 
-        if (TA_SUCCESS != (retCode = TA_SetInputParamIntegerPtr(workData->funcParams, i, inInteger))) {
-          CHECK(createTAError(env, retCode, error));
+      if (inputParaminfo->flags & TA_IN_PRICE_VOLUME) {
+        volume = getNamedPropertyDoubleArray(env, params, "volume");
+
+        if (!volume) {
+          CHECK(createError(env, "Missing 'volume' field", error));
           return false;
         }
 
-        break;
+        workData->garbage.push_back(volume);
+      }
+
+      if (inputParaminfo->flags & TA_IN_PRICE_OPENINTEREST) {
+        openInterest = getNamedPropertyDoubleArray(env, params, "openInterest");
+
+        if (!openInterest) {
+          CHECK(createError(env, "Missing 'openInterest' field", error));
+          return false;
+        }
+
+        workData->garbage.push_back(openInterest);
+      }
+
+      if (TA_SUCCESS != (retCode = TA_SetInputParamPricePtr(workData->funcParams, i, open, high, low, close, volume, openInterest))) {
+        CHECK(createTAError(env, retCode, error));
+        return false;
+      }
+
+      break;
+
+    case TA_Input_Real:
+      inReal = getNamedPropertyDoubleArray(env, params, inputParaminfo->paramName);
+
+      if (!inReal) {
+        char errmsg[64] = {0};
+
+        snprintf(errmsg, sizeof(errmsg), "Missing '%s' field", inputParaminfo->paramName);
+        CHECK(createError(env, errmsg, error));
+
+        return false;
+      }
+
+      workData->garbage.push_back(inReal);
+
+      if (TA_SUCCESS != (retCode = TA_SetInputParamRealPtr(workData->funcParams, i, inReal))) {
+        CHECK(createTAError(env, retCode, error));
+        return false;
+      }
+
+      break;
+
+    case TA_Input_Integer:
+      inInteger = getNamedPropertyInt32Array(env, params, inputParaminfo->paramName);
+
+      if (!inInteger) {
+        char errmsg[64] = {0};
+
+        snprintf(errmsg, sizeof(errmsg), "Missing '%s' field", inputParaminfo->paramName);
+        CHECK(createError(env, errmsg, error));
+
+        return false;
+      }
+
+      workData->garbage.push_back(inInteger);
+
+      if (TA_SUCCESS != (retCode = TA_SetInputParamIntegerPtr(workData->funcParams, i, inInteger))) {
+        CHECK(createTAError(env, retCode, error));
+        return false;
+      }
+
+      break;
     }
   }
 
@@ -788,25 +788,25 @@ static bool parseWorkData(napi_env env, napi_value object, WorkData *workData, n
     TA_GetOptInputParameterInfo(funcInfo->handle, i, &optParaminfo);
 
     switch (optParaminfo->type) {
-      case TA_OptInput_RealRange:
-      case TA_OptInput_RealList:
-        if (getNamedPropertyDouble(env, params, optParaminfo->paramName, &optInReal)) {
-          if (TA_SUCCESS != (retCode = TA_SetOptInputParamReal(workData->funcParams, i, optInReal))) {
-            CHECK(createTAError(env, retCode, error));
-            return false;
-          }
+    case TA_OptInput_RealRange:
+    case TA_OptInput_RealList:
+      if (getNamedPropertyDouble(env, params, optParaminfo->paramName, &optInReal)) {
+        if (TA_SUCCESS != (retCode = TA_SetOptInputParamReal(workData->funcParams, i, optInReal))) {
+          CHECK(createTAError(env, retCode, error));
+          return false;
         }
-        break;
+      }
+      break;
 
-      case TA_OptInput_IntegerRange:
-      case TA_OptInput_IntegerList:
-        if (getNamedPropertyInt32(env, params, optParaminfo->paramName, &optInInteger)) {
-          if (TA_SUCCESS != (retCode = TA_SetOptInputParamInteger(workData->funcParams, i, optInInteger))) {
-            CHECK(createTAError(env, retCode, error));
-            return false;
-          }
+    case TA_OptInput_IntegerRange:
+    case TA_OptInput_IntegerList:
+      if (getNamedPropertyInt32(env, params, optParaminfo->paramName, &optInInteger)) {
+        if (TA_SUCCESS != (retCode = TA_SetOptInputParamInteger(workData->funcParams, i, optInInteger))) {
+          CHECK(createTAError(env, retCode, error));
+          return false;
         }
-        break;
+      }
+      break;
     }
   }
 
@@ -814,41 +814,41 @@ static bool parseWorkData(napi_env env, napi_value object, WorkData *workData, n
     TA_GetOutputParameterInfo(funcInfo->handle, i, &outputParaminfo);
 
     switch (outputParaminfo->type) {
-      case TA_Output_Real:
-        outReal = (double *)malloc(sizeof(double) * (workData->endIdx - workData->startIdx + 1));
+    case TA_Output_Real:
+      outReal = (double *)malloc(sizeof(double) * (workData->endIdx - workData->startIdx + 1));
 
-        if (!outReal) {
-          CHECK(createError(env, "Out of memory", error));
-          return false;
-        }
+      if (!outReal) {
+        CHECK(createError(env, "Out of memory", error));
+        return false;
+      }
 
-        memset(outReal, 0, sizeof(double) * (workData->endIdx - workData->startIdx + 1));
-        workData->outReals.push_back(outReal);
+      memset(outReal, 0, sizeof(double) * (workData->endIdx - workData->startIdx + 1));
+      workData->outReals.push_back(outReal);
 
-        if (TA_SUCCESS != (retCode = TA_SetOutputParamRealPtr(workData->funcParams, i, outReal))) {
-          CHECK(createTAError(env, retCode, error));
-          return false;
-        }
+      if (TA_SUCCESS != (retCode = TA_SetOutputParamRealPtr(workData->funcParams, i, outReal))) {
+        CHECK(createTAError(env, retCode, error));
+        return false;
+      }
 
-        break;
+      break;
 
-      case TA_Output_Integer:
-        outInteger = (int *)malloc(sizeof(int) * (workData->endIdx - workData->startIdx + 1));
+    case TA_Output_Integer:
+      outInteger = (int *)malloc(sizeof(int) * (workData->endIdx - workData->startIdx + 1));
 
-        if (!outInteger) {
-          CHECK(createError(env, "Out of memory", error));
-          return false;
-        }
+      if (!outInteger) {
+        CHECK(createError(env, "Out of memory", error));
+        return false;
+      }
 
-        memset(outInteger, 0, sizeof(int) * (workData->endIdx - workData->startIdx + 1));
-        workData->outIntegers.push_back(outInteger);
+      memset(outInteger, 0, sizeof(int) * (workData->endIdx - workData->startIdx + 1));
+      workData->outIntegers.push_back(outInteger);
 
-        if (TA_SUCCESS != (retCode = TA_SetOutputParamIntegerPtr(workData->funcParams, i, outInteger))) {
-          CHECK(createTAError(env, retCode, error));
-          return false;
-        }
+      if (TA_SUCCESS != (retCode = TA_SetOutputParamIntegerPtr(workData->funcParams, i, outInteger))) {
+        CHECK(createTAError(env, retCode, error));
+        return false;
+      }
 
-        break;
+      break;
     }
   }
 
@@ -880,21 +880,21 @@ static bool generateResult(napi_env env, const WorkData *workData, napi_value *r
     CHECK(napi_create_array_with_length(env, workData->outNBElement, &array));
 
     switch (outputParaminfo->type) {
-      case TA_Output_Real:
-        outReal = workData->outReals[outRealIdx++];
+    case TA_Output_Real:
+      outReal = workData->outReals[outRealIdx++];
 
-        for (int j = 0; j < workData->outNBElement; ++j)
-          CHECK(setArrayDouble(env, array, j, outReal[j]));
+      for (int j = 0; j < workData->outNBElement; ++j)
+        CHECK(setArrayDouble(env, array, j, outReal[j]));
 
-        break;
+      break;
 
-      case TA_Output_Integer:
-        outInteger = workData->outIntegers[outIntegerIdx++];
+    case TA_Output_Integer:
+      outInteger = workData->outIntegers[outIntegerIdx++];
 
-        for (int j = 0; j < workData->outNBElement; ++j)
-          CHECK(setArrayInt32(env, array, j, outInteger[j]));
+      for (int j = 0; j < workData->outNBElement; ++j)
+        CHECK(setArrayInt32(env, array, j, outInteger[j]));
 
-        break;
+      break;
     }
 
     CHECK(napi_set_named_property(env, object, outputParaminfo->paramName, array));
@@ -1007,8 +1007,8 @@ static napi_value execute(napi_env env, napi_callback_info info) {
   CHECK(napi_typeof(env, argv[1], &valuetype));
 
   return valuetype == napi_function
-    ? executeAsync(env, argv[0], argv[1])
-    : executeSync(env, argv[0]);
+             ? executeAsync(env, argv[0], argv[1])
+             : executeSync(env, argv[0]);
 }
 
 static napi_value version(napi_env env, napi_callback_info info) {
@@ -1023,13 +1023,13 @@ static napi_value init(napi_env env, napi_value exports) {
   TA_Initialize();
 
   napi_property_descriptor props[] = {
-    DECLARE_NAPI_METHOD(getFunctionGroups),
-    DECLARE_NAPI_METHOD(getFunctions),
-    DECLARE_NAPI_METHOD(setUnstablePeriod),
-    DECLARE_NAPI_METHOD(setCompatibility),
-    DECLARE_NAPI_METHOD(explain),
-    DECLARE_NAPI_METHOD(execute),
-    DECLARE_NAPI_METHOD(version),
+      DECLARE_NAPI_METHOD(getFunctionGroups),
+      DECLARE_NAPI_METHOD(getFunctions),
+      DECLARE_NAPI_METHOD(setUnstablePeriod),
+      DECLARE_NAPI_METHOD(setCompatibility),
+      DECLARE_NAPI_METHOD(explain),
+      DECLARE_NAPI_METHOD(execute),
+      DECLARE_NAPI_METHOD(version),
   };
   CHECK(napi_define_properties(env, exports, arraysize(props), props));
 
