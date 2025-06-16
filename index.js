@@ -11,10 +11,16 @@
 
 const types = require("./types.js");
 
-try {
-  const binding = require("./build/Release/napi_talib.node");
-  module.exports = Object.assign(binding, types);
-} catch {
-  const binding = require("./build/Debug/napi_talib.node");
-  module.exports = Object.assign(binding, types);
-}
+const binding = () => {
+  try {
+    return require("./build/Release/napi_talib.node");
+  } catch {
+    try {
+      return require("./build/Debug/napi_talib.node");
+    } catch {
+      throw new Error("Cannot find module 'napi_talib.node'");
+    }
+  }
+};
+
+module.exports = Object.assign(binding(), types);
