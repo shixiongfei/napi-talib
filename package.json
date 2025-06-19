@@ -1,6 +1,6 @@
 {
   "name": "napi-talib",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "description": "Node API for TA-Lib",
   "main": "index.js",
   "types": "index.d.ts",
@@ -60,9 +60,9 @@
   },
   "homepage": "https://github.com/shixiongfei/napi-talib#readme",
   "devDependencies": {
-    "@types/node": "^22.13.1",
-    "node-gyp": "^11.1.0",
+    "@types/node": "^24.0.3",
+    "node-gyp": "^11.2.0",
     "rimraf": "^6.0.1",
-    "typescript": "^5.7.3"
+    "typescript": "^5.8.3"
   }
 }
