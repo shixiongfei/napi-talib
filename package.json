@@ -4,6 +4,7 @@
   "description": "Node API for TA-Lib",
   "main": "index.js",
   "types": "index.d.ts",
+  "type": "module",
   "files": [
     "src/*.cpp",
     "src/ta-lib/include/",
@@ -12,12 +13,15 @@
     "index.d.ts",
     "functions.ts",
     "functions.js",
+    "functions.js.map",
     "functions.d.ts",
     "promises.ts",
     "promises.js",
+    "promises.js.map",
     "promises.d.ts",
     "types.ts",
     "types.js",
+    "types.js.map",
     "types.d.ts",
     "binding.gyp",
     "tsconfig.json"

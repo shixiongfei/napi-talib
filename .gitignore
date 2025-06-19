@@ -4,10 +4,13 @@ node_modules/
 build/
 prebuilds/
 types.js
+types.js.map
 types.d.ts
 functions.ts
 functions.js
+functions.js.map
 functions.d.ts
 promises.ts
 promises.js
+promises.js.map
 promises.d.ts

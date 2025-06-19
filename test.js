@@ -1,7 +1,7 @@
 /*
  * test.js
  *
- * Copyright (c) 2024 Xiongfei Shi
+ * Copyright (c) 2024-2025 Xiongfei Shi
  *
  * Author: Xiongfei Shi <xiongfei.shi(a)icloud.com>
  * License: Apache-2.0
@@ -9,10 +9,10 @@
  * https://github.com/shixiongfei/napi-talib
  */
 
-const fs = require("node:fs");
-const talib = require(".");
-const { ADX } = require("./functions");
-const { SMA, EMA } = require("./promises.js");
+import fs from "node:fs";
+import talib from "./index.js";
+import { ADX } from "./functions.js";
+import { SMA, EMA } from "./promises.js";
 
 /*
  * In real projects, it can be written like this

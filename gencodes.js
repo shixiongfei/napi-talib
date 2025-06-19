@@ -1,7 +1,7 @@
 /*
  * gencodes.js
  *
- * Copyright (c) 2024 Xiongfei Shi
+ * Copyright (c) 2024-2025 Xiongfei Shi
  *
  * Author: Xiongfei Shi <xiongfei.shi(a)icloud.com>
  * License: Apache-2.0
@@ -9,8 +9,8 @@
  * https://github.com/shixiongfei/napi-talib
  */
 
-const fs = require("node:fs");
-const talib = require("./index.js");
+import fs from "node:fs";
+import talib from "./index.js";
 
 const inputFlagToName = (flag) => {
   switch (flag) {
@@ -107,9 +107,9 @@ const genCallArgs = (funcInfo) => {
 
 const genFuncReturns = (funcInfo) => {
   return funcInfo.outputs.length === 1
-    ? `fillNaN(results.begIndex, ${funcInfo.outputs[0].name})`
+    ? `fillNaN(results.begIndex, ${funcInfo.outputs[0].name}!)`
     : `[${funcInfo.outputs
-        .map((output) => `fillNaN(results.begIndex, ${output.name})`)
+        .map((output) => `fillNaN(results.begIndex, ${output.name}!)`)
         .join(", ")}]`;
 };
 
